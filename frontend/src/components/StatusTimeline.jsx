@@ -3,9 +3,9 @@ const STEPS = [
   { label: "Submit Task", description: "Describe work & set budget" },
   { label: "AI Negotiation", description: "3 sellers compete in 2 rounds" },
   { label: "Winner Selected", description: "Optimizer picks the best deal" },
-  { label: "Escrow Funded", description: "ALGO locked in smart contract" },
-  { label: "Delivery Verified", description: "Oracle confirms completion" },
-  { label: "Funds Released", description: "Seller paid via inner txn" },
+  { label: "Escrow Funded", description: "ALGO deducted via Pera Wallet" },
+  { label: "Delivery Check", description: "Simulate on-time or late" },
+  { label: "Deal Resolved", description: "Funds released or refunded" },
 ];
 
 export default function StatusTimeline({ currentStep }) {

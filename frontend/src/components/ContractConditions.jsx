@@ -47,34 +47,27 @@ export default function ContractConditions({ contract, funded }) {
         </div>
       </div>
 
-      {!demoMode && appId && deployTxId && createTxId ? (
-        <div className="mt-3 flex gap-2">
-          <a
-            href={`https://testnet.explorer.perawallet.app/tx/${deployTxId}`}
-            target="_blank"
-            rel="noreferrer"
-            className="text-xs text-accord-accent hover:underline"
-          >
-            Deploy Tx
-          </a>
-          <span className="text-gray-600">|</span>
-          <a
-            href={`https://testnet.explorer.perawallet.app/tx/${createTxId}`}
-            target="_blank"
-            rel="noreferrer"
-            className="text-xs text-accord-accent hover:underline"
-          >
-            Create Deal Tx
-          </a>
-          <span className="text-gray-600">|</span>
-          <a
-            href={`https://testnet.explorer.perawallet.app/application/${appId}`}
-            target="_blank"
-            rel="noreferrer"
-            className="text-xs text-accord-accent hover:underline"
-          >
-            View Contract
-          </a>
+      {!demoMode && appId ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {deployTxId && (
+            <>
+              <a href={`https://testnet.explorer.perawallet.app/tx/${deployTxId}`} target="_blank" rel="noreferrer" className="text-xs text-accord-accent hover:underline">Deploy Tx</a>
+              <span className="text-gray-600">|</span>
+            </>
+          )}
+          {createTxId && (
+            <>
+              <a href={`https://testnet.explorer.perawallet.app/tx/${createTxId}`} target="_blank" rel="noreferrer" className="text-xs text-accord-accent hover:underline">Create Deal Tx</a>
+              <span className="text-gray-600">|</span>
+            </>
+          )}
+          {contract.fundPayTxId && (
+            <>
+              <a href={`https://testnet.explorer.perawallet.app/tx/${contract.fundPayTxId}`} target="_blank" rel="noreferrer" className="text-xs text-accord-green hover:underline">Fund Payment Tx</a>
+              <span className="text-gray-600">|</span>
+            </>
+          )}
+          <a href={`https://testnet.explorer.perawallet.app/application/${appId}`} target="_blank" rel="noreferrer" className="text-xs text-accord-accent hover:underline">View Contract</a>
         </div>
       ) : (
         <div className="mt-3 text-xs text-gray-400">Demo Mode: on-chain explorer links unavailable.</div>
