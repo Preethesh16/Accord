@@ -5,7 +5,10 @@ const router = Router();
 
 router.post("/", async (req, res, next) => {
   try {
-    const txId = await callRefundBuyer();
+    const { appId } = req.body;
+    if (!appId) return res.status(400).json({ error: "Missing appId" });
+
+    const txId = await callRefundBuyer(appId);
     res.json({ success: true, txId });
   } catch (err) {
     next(err);
