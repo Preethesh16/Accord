@@ -1,0 +1,143 @@
+#pragma version 8
+
+txn ApplicationID
+int 0
+==
+bnz on_create
+
+txn OnCompletion
+int NoOp
+==
+bnz on_call
+
+int 0
+return
+
+on_create:
+byte "status"
+int 0
+app_global_put
+byte "verified"
+int 0
+app_global_put
+int 1
+return
+
+on_call:
+txn NumAppArgs
+int 1
+<
+bnz reject
+
+txna ApplicationArgs 0
+method "createDeal(address,address,uint64,uint64)void"
+==
+bnz createDeal
+
+txna ApplicationArgs 0
+method "fundDeal(pay)void"
+==
+bnz fundDeal
+
+txna ApplicationArgs 0
+method "verifyComplete()void"
+==
+bnz verifyComplete
+
+txna ApplicationArgs 0
+method "releaseFunds()void"
+==
+bnz releaseFunds
+
+txna ApplicationArgs 0
+method "refundBuyer()void"
+==
+bnz refundBuyer
+
+reject:
+int 0
+return
+
+createDeal:
+txn NumAppArgs
+int 5
+==
+assert
+byte "status"
+app_global_get
+int 0
+==
+assert
+byte "buyer"
+txna ApplicationArgs 1
+app_global_put
+byte "seller"
+txna ApplicationArgs 2
+app_global_put
+byte "amount"
+txna ApplicationArgs 3
+btoi
+app_global_put
+byte "deadline"
+txna ApplicationArgs 4
+btoi
+app_global_put
+byte "status"
+int 1
+app_global_put
+int 1
+return
+
+fundDeal:
+byte "status"
+app_global_get
+int 1
+==
+assert
+byte "status"
+int 2
+app_global_put
+int 1
+return
+
+verifyComplete:
+byte "status"
+app_global_get
+int 2
+==
+assert
+byte "verified"
+int 1
+app_global_put
+int 1
+return
+
+releaseFunds:
+byte "status"
+app_global_get
+int 2
+==
+assert
+byte "verified"
+app_global_get
+int 1
+==
+assert
+byte "status"
+int 4
+app_global_put
+int 1
+return
+
+refundBuyer:
+byte "status"
+app_global_get
+int 2
+==
+assert
+byte "status"
+int 5
+app_global_put
+int 1
+return
+
