@@ -31,6 +31,7 @@ export default function EscrowStatus({ status, txHash, verifyTxHash, releaseTxHa
     funded: { label: "Escrow Funded", color: "text-accord-accent", spin: false },
     verifying: { label: "Verifying Delivery...", color: "text-accord-accent", spin: true },
     complete: { label: "Deal Complete — Funds Released", color: "text-accord-green", spin: false },
+    held: { label: "Late Delivery — Funds Kept in Escrow", color: "text-accord-red", spin: false },
     refunded: { label: "Deadline Missed — Funds Kept in Escrow", color: "text-accord-red", spin: false },
   };
 
@@ -60,7 +61,7 @@ export default function EscrowStatus({ status, txHash, verifyTxHash, releaseTxHa
         {refundTxHash && <TxRow label="Refund Transaction" txHash={refundTxHash} />}
       </div>
 
-      {dealAmount && (status === "complete" || status === "refunded") && (
+      {dealAmount && (status === "complete" || status === "refunded" || status === "held") && (
         <div className="mt-3 bg-accord-bg rounded-lg p-3 text-sm">
           <div className="text-xs text-gray-400 mb-1">Transaction Cost</div>
           <div className="flex justify-between">
@@ -74,7 +75,7 @@ export default function EscrowStatus({ status, txHash, verifyTxHash, releaseTxHa
           <div className="flex justify-between border-t border-accord-border mt-1 pt-1">
             <span className="text-gray-300 font-medium">Total Deducted</span>
             <span className="font-mono font-semibold text-accord-green">
-              {status === "complete" ? `${dealAmount} ALGO` : "0 ALGO (refunded)"}
+              {status === "complete" ? `${dealAmount} ALGO` : `${dealAmount} ALGO (still in escrow)`}
             </span>
           </div>
         </div>

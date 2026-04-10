@@ -10,16 +10,28 @@ export function useWallet() {
   const [address, setAddress] = useState(null);
   const [connected, setConnected] = useState(false);
   const [balance, setBalance] = useState(null);
+  const [minBalance, setMinBalance] = useState(null);
+  const [spendableBalance, setSpendableBalance] = useState(null);
   const initialized = useRef(false);
 
   const fetchBalance = useCallback(async (addr) => {
-    if (!addr) { setBalance(null); return; }
+    if (!addr) {
+      setBalance(null);
+      setMinBalance(null);
+      setSpendableBalance(null);
+      return;
+    }
     try {
       const info = await algodClient.accountInformation(addr).do();
       const microAlgo = Number(info.amount || 0n);
+      const microMinBalance = Number(info["min-balance"] || info.minBalance || 0n);
       setBalance(Math.round((microAlgo / 1e6) * 10000) / 10000);
+      setMinBalance(Math.round((microMinBalance / 1e6) * 10000) / 10000);
+      setSpendableBalance(Math.round((Math.max(microAlgo - microMinBalance, 0) / 1e6) * 10000) / 10000);
     } catch {
       setBalance(null);
+      setMinBalance(null);
+      setSpendableBalance(null);
     }
   }, []);
 
@@ -67,6 +79,8 @@ export function useWallet() {
     setAddress(null);
     setConnected(false);
     setBalance(null);
+    setMinBalance(null);
+    setSpendableBalance(null);
   };
 
   const signTransactions = async (txnGroups) => {
@@ -74,5 +88,15 @@ export function useWallet() {
     return await peraWallet.signTransaction(groups);
   };
 
-  return { address, connected, balance, connect, disconnect, signTransactions, refreshBalance };
+  return {
+    address,
+    connected,
+    balance,
+    minBalance,
+    spendableBalance,
+    connect,
+    disconnect,
+    signTransactions,
+    refreshBalance,
+  };
 }
