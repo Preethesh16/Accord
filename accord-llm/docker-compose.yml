@@ -1,0 +1,49 @@
+services:
+  accord-vllm:
+    image: ${VLLM_IMAGE}
+    container_name: accord-vllm
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${VLLM_HOST_PORT:-8002}:8000"
+    ipc: host
+    group_add:
+      - video
+      - render
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    volumes:
+      - /root/.cache/huggingface:/root/.cache/huggingface
+    environment:
+      HUGGINGFACE_HUB_CACHE: /root/.cache/huggingface
+      HF_HOME: /root/.cache/huggingface
+      TOKENIZERS_PARALLELISM: "false"
+      VLLM_USE_AITER_UNIFIED_ATTENTION: "1"
+      VLLM_ROCM_USE_AITER: "1"
+      VLLM_ROCM_USE_AITER_MHA: "0"
+      VLLM_ROCM_USE_AITER_TRITON_BF16_GEMM: "0"
+      VLLM_ROCM_QUICK_REDUCE_QUANTIZATION: "INT4"
+      SAFETENSORS_FAST_GPU: "1"
+      HIP_FORCE_DEV_KERNARG: "1"
+    command:
+      - /bin/sh
+      - -lc
+      - >
+        vllm serve ${VLLM_MODEL}
+        --port 8000
+        --max-model-len ${VLLM_MAX_MODEL_LEN:-8192}
+        --tensor-parallel-size ${VLLM_TENSOR_PARALLEL_SIZE:-1}
+        --gpu-memory-utilization ${VLLM_GPU_MEMORY_UTILIZATION:-0.9}
+        --max-num-seqs ${VLLM_MAX_NUM_SEQS:-64}
+        --async-scheduling
+        --block-size ${VLLM_BLOCK_SIZE:-32}
+        --no-enable-prefix-caching
+
+  accord-llm-middleware:
+    build:
+      context: .
+    container_name: accord-llm-middleware
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - .env

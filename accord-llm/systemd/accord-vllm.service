@@ -1,0 +1,17 @@
+[Unit]
+Description=Accord Custom vLLM Container
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/accord-llm
+RemainAfterExit=yes
+ExecStartPre=/usr/bin/bash /root/accord-llm/scripts/configure_vllm.sh
+ExecStart=/usr/bin/docker compose --env-file /root/accord-llm/.env.vllm up -d accord-vllm
+ExecStop=/usr/bin/docker compose --env-file /root/accord-llm/.env.vllm stop accord-vllm
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

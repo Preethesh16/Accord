@@ -1,4 +1,4 @@
-export default function DealSummary({ winner, onFund, funded }) {
+export default function DealSummary({ winner, onFund, funded, funding, spendableBalance }) {
   return (
     <div className="animate-fade-in border border-accord-accent/30 bg-accord-accent/5 rounded-xl p-6">
       <div className="flex items-center gap-2 mb-4">
@@ -46,13 +46,20 @@ export default function DealSummary({ winner, onFund, funded }) {
       {/* Explanation */}
       <p className="text-sm text-gray-400 mb-4">{winner.explanation}</p>
 
+      {spendableBalance !== null && !funded && (
+        <div className="mb-4 text-xs text-gray-400">
+          Spendable wallet balance: <span className="font-mono text-white">{spendableBalance} ALGO</span>
+        </div>
+      )}
+
       {/* Fund Button */}
       {!funded && (
         <button
           onClick={onFund}
-          className="w-full bg-accord-green hover:bg-accord-green/80 text-white font-medium py-3 rounded-lg transition-all"
+          disabled={funding}
+          className="w-full bg-accord-green hover:bg-accord-green/80 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium py-3 rounded-lg transition-all"
         >
-          Fund Escrow — {winner.price} ALGO
+          {funding ? "Submitting Escrow Funding..." : `Fund Escrow — ${winner.price} ALGO`}
         </button>
       )}
     </div>
