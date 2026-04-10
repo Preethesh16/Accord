@@ -69,14 +69,74 @@ Write a short negotiation message (2-3 sentences max). State your price and time
   return response.content[0].text;
 }
 
+async function generateMessageWithMiddleware(seller, task, budget, offer, round, sessionId) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), config.negotiation.timeoutMs);
+
+  try {
+    const res = await fetch(config.negotiation.backendUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        seller: seller.name,
+        task,
+        budget: `${budget} ALGO`,
+        round,
+        offer_price: `${offer.price} ALGO`,
+        timeline: `${offer.days} days`,
+        negotiation_id: sessionId || undefined,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Negotiation middleware error ${res.status}: ${text}`);
+    }
+
+    const data = await res.json();
+    return {
+      message: data.message || mockTemplates[seller.id][round](task, offer.price, offer.days),
+      negotiationId: data.negotiation_id || sessionId || null,
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function runNegotiation(task, budget, deadline) {
   const totalRounds = 2;
   const messages = [];
+  const sessionIds = new Map();
 
   for (let round = 1; round <= totalRounds; round++) {
     for (const seller of sellers) {
       const offer = computeOffer(seller, budget, round, totalRounds);
-      const message = await generateMessage(seller, task, budget, offer, round, messages);
+      let message;
+      let negotiationId = sessionIds.get(seller.name) || null;
+
+      try {
+        const result = await generateMessageWithMiddleware(
+          seller,
+          task,
+          budget,
+          offer,
+          round,
+          negotiationId
+        );
+        message = result.message;
+        negotiationId = result.negotiationId;
+      } catch (err) {
+        console.warn(
+          `[Negotiate] Middleware fallback for ${seller.name} round ${round}:`,
+          err.message
+        );
+        message = await generateMessage(seller, task, budget, offer, round, messages);
+      }
+
+      if (negotiationId) {
+        sessionIds.set(seller.name, negotiationId);
+      }
 
       messages.push({
         seller: seller.name,
