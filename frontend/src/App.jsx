@@ -9,7 +9,7 @@ import EscrowStatus from "./components/EscrowStatus";
 import DeliverySimulation from "./components/DeliverySimulation";
 import { BACKEND_URL } from "./config/constants";
 import { useWallet } from "./hooks/useWallet";
-import { signAndSubmitFundingGroup } from "./utils/algorand";
+import { signAndSubmitPayment } from "./utils/algorand";
 
 // Steps: 0=connect, 1=form, 2=negotiating, 3=deal ready, 4=funding, 5=delivery sim, 6=resolved
 
@@ -19,8 +19,9 @@ export default function App() {
   const [messages, setMessages] = useState([]);
   const [winner, setWinner] = useState(null);
   const [contract, setContract] = useState(null);
-  const [fundTxns, setFundTxns] = useState([]);
+  const [fundTxn, setFundTxn] = useState(null);
   const [fundTxHash, setFundTxHash] = useState(null);
+  const [fundConfirmTxHash, setFundConfirmTxHash] = useState(null);
   const [verifyTxHash, setVerifyTxHash] = useState(null);
   const [releaseTxHash, setReleaseTxHash] = useState(null);
   const [refundTxHash, setRefundTxHash] = useState(null);
@@ -48,8 +49,9 @@ export default function App() {
     setMessages([]);
     setWinner(null);
     setContract(null);
-    setFundTxns([]);
+    setFundTxn(null);
     setFundTxHash(null);
+    setFundConfirmTxHash(null);
     setVerifyTxHash(null);
     setReleaseTxHash(null);
     setRefundTxHash(null);
@@ -86,7 +88,7 @@ export default function App() {
       setMessages(data.messages);
       setWinner(data.winner);
       setContract(data.contract);
-      setFundTxns(data.fundTxns || []);
+      setFundTxn(data.fundTxn);
       setWarning(data.warning || null);
     } catch (err) {
       setError(err.message);
@@ -102,10 +104,9 @@ export default function App() {
   const handleFundEscrow = async () => {
     setStep(4);
     setError(null);
-    setWarning(null);
 
     try {
-      if (contract?.demoMode || !Array.isArray(fundTxns) || fundTxns.length === 0) {
+      if (contract?.demoMode || !fundTxn) {
         // Demo mode — no real transaction
         setWarning("Demo mode: simulated transaction.");
         setFundTxHash(`SIM_FUND_${Date.now()}`);
@@ -113,20 +114,32 @@ export default function App() {
         return;
       }
 
-      // Sign the grouped payment + app call so escrow funding is actually recorded on-chain.
-      const payTxId = await signAndSubmitFundingGroup(fundTxns, wallet);
+      // Buyer signs simple payment via Pera — shows in Pera wallet history
+      const payTxId = await signAndSubmitPayment(fundTxn.txn, wallet);
       setFundTxHash(payTxId);
       console.log("[Fund] Buyer payment confirmed:", payTxId);
+
+      // Oracle updates contract status to "funded"
+      const confirmRes = await fetch(`${BACKEND_URL}/api/fund-confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appId: contract.appId }),
+      });
+      if (confirmRes.ok) {
+        const data = await confirmRes.json();
+        setFundConfirmTxHash(data.txId);
+      }
 
       setStep(5);
       wallet.refreshBalance?.();
       await notify(`Escrow funded: ${winner.price} ALGO deducted from your wallet`);
     } catch (err) {
       console.error("Fund error:", err);
-      setFundTxHash(null);
       setError(err.message || "Funding failed");
-      setWarning("Escrow funding did not complete. Open Pera Wallet and approve the grouped transaction to continue.");
-      setStep(3);
+      // Fallback to demo
+      setFundTxHash(`SIM_FUND_${Date.now()}`);
+      setWarning("Demo mode fallback: on-chain failed, using simulation.");
+      setStep(5);
     }
   };
 
@@ -152,45 +165,26 @@ export default function App() {
         return;
       }
 
-      if (onTime) {
-        const verifyRes = await fetch(`${BACKEND_URL}/api/verify`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ appId: contract.appId }),
-        });
-        if (!verifyRes.ok) {
-          const errData = await verifyRes.json();
-          throw new Error(errData.error || "Verification failed");
-        }
-        const verifyData = await verifyRes.json();
-        setVerifyTxHash(verifyData.txId);
+      const res = await fetch(`${BACKEND_URL}/api/deliver`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appId: contract.appId, simulateOnTime: onTime }),
+      });
 
-        const releaseRes = await fetch(`${BACKEND_URL}/api/release`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ appId: contract.appId }),
-        });
-        if (!releaseRes.ok) {
-          const errData = await releaseRes.json();
-          throw new Error(errData.error || "Release failed");
-        }
-        const releaseData = await releaseRes.json();
-        setReleaseTxHash(releaseData.txId);
-        setDeliveryOutcome("released");
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "Delivery simulation failed");
+      }
+
+      const data = await res.json();
+      setDeliveryOutcome(data.outcome);
+
+      if (data.outcome === "released") {
+        setVerifyTxHash(data.verifyTxId);
+        setReleaseTxHash(data.releaseTxId);
         await notify(`Deal complete: ${winner.price} ALGO released to seller`);
       } else {
-        const refundRes = await fetch(`${BACKEND_URL}/api/refund`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ appId: contract.appId }),
-        });
-        if (!refundRes.ok) {
-          const errData = await refundRes.json();
-          throw new Error(errData.error || "Refund failed");
-        }
-        const refundData = await refundRes.json();
-        setRefundTxHash(refundData.txId);
-        setDeliveryOutcome("refunded");
+        setRefundTxHash(data.refundTxId);
         await notify(`Late delivery: ${winner.price} ALGO refunded to your wallet`);
       }
 

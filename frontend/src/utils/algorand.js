@@ -3,18 +3,17 @@ import { ALGOD_SERVER, ALGOD_PORT, ALGOD_TOKEN } from "../config/constants";
 
 const algodClient = new algosdk.Algodv2(ALGOD_TOKEN, ALGOD_SERVER, ALGOD_PORT);
 
-// Sign the grouped escrow funding transactions via Pera and submit them together.
-export async function signAndSubmitFundingGroup(encodedTxns, wallet) {
-  if (!Array.isArray(encodedTxns) || encodedTxns.length === 0) {
-    throw new Error("No on-chain funding transactions are available for this deal");
-  }
+// Sign a single simple payment via Pera and submit
+export async function signAndSubmitPayment(base64Txn, wallet) {
+  // Decode the unsigned payment from base64
+  const txnBytes = Uint8Array.from(atob(base64Txn), (c) => c.charCodeAt(0));
 
-  const txnGroup = encodedTxns.map((entry) => ({
-    txn: Uint8Array.from(atob(entry.txn), (c) => c.charCodeAt(0)),
-    signers: [wallet.address],
-  }));
+  // Ask Pera to sign — single payment, no group, no app call
+  const signedTxns = await wallet.signTransactions([
+    { txn: txnBytes, signers: [wallet.address] },
+  ]);
 
-  const signedTxns = await wallet.signTransactions(txnGroup);
+  // Submit signed payment to Algorand
   const result = await algodClient.sendRawTransaction(signedTxns).do();
   const txId = result.txId || result.txid;
   await algosdk.waitForConfirmation(algodClient, txId, 10);
