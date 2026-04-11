@@ -290,6 +290,37 @@ export default function App() {
 
         <aside className="w-72 border-l border-accord-border overflow-y-auto p-4 hidden lg:block">
           <StatusTimeline currentStep={step} />
+
+          {wallet.address && (
+            <div className="mt-6 border border-accord-border bg-accord-card rounded-xl p-4">
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Wallet Portfolio</h3>
+              <div className="space-y-3">
+                <div>
+                  <div className="text-xs text-gray-500">Total Balance</div>
+                  <div className="text-lg font-mono font-semibold text-white">
+                    {wallet.balance !== null ? `${wallet.balance} ALGO` : "—"}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-accord-bg rounded-lg p-2">
+                    <div className="text-xs text-gray-500">Spendable</div>
+                    <div className="text-sm font-mono font-semibold text-accord-green">
+                      {wallet.spendableBalance !== null ? wallet.spendableBalance : "—"}
+                    </div>
+                  </div>
+                  <div className="bg-accord-bg rounded-lg p-2">
+                    <div className="text-xs text-gray-500">Locked</div>
+                    <div className="text-sm font-mono font-semibold text-accord-yellow">
+                      {wallet.minBalance !== null ? wallet.minBalance : "—"}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500 font-mono truncate" title={wallet.address}>
+                  {wallet.address.slice(0, 8)}...{wallet.address.slice(-6)}
+                </div>
+              </div>
+            </div>
+          )}
         </aside>
       </div>
     </div>
