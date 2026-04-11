@@ -27,7 +27,7 @@ export default function App() {
   const [deliveryOutcome, setDeliveryOutcome] = useState(null);
   const [loading, setLoading] = useState(false);
   const [funding, setFunding] = useState(false);
-  const [deliveryLoading, setDeliveryLoading] = useState(false);
+  const [deliveryLoading] = useState(false); // kept for compatibility
   const [error, setError] = useState(null);
   const [warning, setWarning] = useState(null);
 
@@ -177,78 +177,20 @@ export default function App() {
     }
   };
 
-  // Step 5→6: Delivery simulation
-  const handleDeliverySimulation = async (onTime) => {
-    setDeliveryLoading(true);
-    setError(null);
-
-    try {
-      if (contract?.demoMode || !contract?.appId) {
-        if (onTime) {
-          setVerifyTxHash(`SIM_VERIFY_${Date.now()}`);
-          setReleaseTxHash(`SIM_RELEASE_${Date.now()}`);
-          setDeliveryOutcome("released");
-          await notify(`Deal complete: ${winner.price} ALGO released to seller`);
-        } else {
-          setRefundTxHash(`SIM_REFUND_${Date.now()}`);
-          setDeliveryOutcome("refunded");
-          await notify(`Delivery late: ${winner.price} ALGO refunded to your wallet`);
-        }
-        setStep(6);
-        wallet.refreshBalance?.();
-        return;
-      }
-
-      if (onTime) {
-        const verifyRes = await fetch(`${BACKEND_URL}/api/verify`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ appId: contract.appId }),
-        });
-        if (!verifyRes.ok) {
-          const errData = await verifyRes.json();
-          throw new Error(errData.error || "Verification failed");
-        }
-        const verifyData = await verifyRes.json();
-        setVerifyTxHash(verifyData.txId);
-
-        const releaseRes = await fetch(`${BACKEND_URL}/api/release`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ appId: contract.appId }),
-        });
-        if (!releaseRes.ok) {
-          const errData = await releaseRes.json();
-          throw new Error(errData.error || "Release failed");
-        }
-        const releaseData = await releaseRes.json();
-        setReleaseTxHash(releaseData.txId);
-        setDeliveryOutcome("released");
-        await notify(`Deal complete: ${winner.price} ALGO released to seller`);
-      } else {
-        const refundRes = await fetch(`${BACKEND_URL}/api/refund`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ appId: contract.appId }),
-        });
-        if (!refundRes.ok) {
-          const errData = await refundRes.json();
-          throw new Error(errData.error || "Refund failed");
-        }
-        const refundData = await refundRes.json();
-        setRefundTxHash(refundData.txId);
-        setDeliveryOutcome("refunded");
-        await notify(`Delivery late: ${winner.price} ALGO refunded to your wallet`);
-      }
-
-      setStep(6);
-      wallet.refreshBalance?.();
-    } catch (err) {
-      console.error("Delivery error:", err);
-      setError(err.message);
-    } finally {
-      setDeliveryLoading(false);
+  // Step 5→6: AI delivery evaluation result
+  const handleDeliveryResult = async (result) => {
+    if (result.verdict === "on_time") {
+      setVerifyTxHash(result.verifyTxId || `SIM_VERIFY_${Date.now()}`);
+      setReleaseTxHash(result.releaseTxId || `SIM_RELEASE_${Date.now()}`);
+      setDeliveryOutcome("released");
+      await notify(`Deal complete: ${winner.price} ALGO released to seller`);
+    } else {
+      setRefundTxHash(result.refundTxId || `SIM_REFUND_${Date.now()}`);
+      setDeliveryOutcome("refunded");
+      await notify(`Delivery late: ${winner.price} ALGO refunded to your wallet`);
     }
+    setStep(6);
+    wallet.refreshBalance?.();
   };
 
   return (
@@ -337,9 +279,9 @@ export default function App() {
 
               {step === 5 && (
                 <DeliverySimulation
-                  onSimulate={handleDeliverySimulation}
-                  loading={deliveryLoading}
                   winner={winner}
+                  contract={contract}
+                  onResult={handleDeliveryResult}
                 />
               )}
             </div>

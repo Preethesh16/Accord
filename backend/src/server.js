@@ -7,6 +7,7 @@ import fundRouter from "./routes/fund.js";
 import verifyRouter from "./routes/verify.js";
 import releaseRouter from "./routes/release.js";
 import refundRouter from "./routes/refund.js";
+import deliverRouter from "./routes/deliver.js";
 import contractStateRouter from "./routes/contractState.js";
 
 const app = express();
@@ -29,6 +30,7 @@ app.use("/api/fund", fundRouter);
 app.use("/api/verify", verifyRouter);
 app.use("/api/release", releaseRouter);
 app.use("/api/refund", refundRouter);
+app.use("/api/deliver", deliverRouter);
 app.use("/api/contract", contractStateRouter);
 
 app.use(errorHandler);
