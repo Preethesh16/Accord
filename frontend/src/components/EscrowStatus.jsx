@@ -32,7 +32,7 @@ export default function EscrowStatus({ status, txHash, verifyTxHash, releaseTxHa
     verifying: { label: "Verifying Delivery...", color: "text-accord-accent", spin: true },
     complete: { label: "Deal Complete — Funds Released", color: "text-accord-green", spin: false },
     held: { label: "Late Delivery — Funds Kept in Escrow", color: "text-accord-red", spin: false },
-    refunded: { label: "Deadline Missed — Funds Kept in Escrow", color: "text-accord-red", spin: false },
+    refunded: { label: "Deadline Missed — Funds Refunded to Buyer", color: "text-accord-yellow", spin: false },
   };
 
   const s = states[status] || states.funding;
@@ -74,8 +74,8 @@ export default function EscrowStatus({ status, txHash, verifyTxHash, releaseTxHa
           </div>
           <div className="flex justify-between border-t border-accord-border mt-1 pt-1">
             <span className="text-gray-300 font-medium">Total Deducted</span>
-            <span className="font-mono font-semibold text-accord-green">
-              {status === "complete" ? `${dealAmount} ALGO` : `${dealAmount} ALGO (still in escrow)`}
+            <span className={`font-mono font-semibold ${status === "refunded" ? "text-accord-yellow" : "text-accord-green"}`}>
+              {status === "complete" ? `${dealAmount} ALGO` : status === "refunded" ? `${dealAmount} ALGO (refunded)` : `${dealAmount} ALGO (still in escrow)`}
             </span>
           </div>
         </div>
