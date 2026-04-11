@@ -65,7 +65,6 @@ class DealEscrow(ARC4Contract):
     @arc4.abimethod()
     def refundBuyer(self) -> None:
         assert self.status.value == UInt64(2), "Deal not in funded state"
-        assert Global.latest_timestamp > self.deadline.value, "Deadline not passed"
         itxn.Payment(
             receiver=self.buyer.value.native,
             amount=self.amount.value,

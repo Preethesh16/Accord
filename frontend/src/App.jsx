@@ -190,8 +190,9 @@ export default function App() {
           setDeliveryOutcome("released");
           await notify(`Deal complete: ${winner.price} ALGO released to seller`);
         } else {
-          setDeliveryOutcome("held");
-          await notify(`Late delivery: ${winner.price} ALGO remains in escrow`);
+          setRefundTxHash(`SIM_REFUND_${Date.now()}`);
+          setDeliveryOutcome("refunded");
+          await notify(`Delivery late: ${winner.price} ALGO refunded to your wallet`);
         }
         setStep(6);
         wallet.refreshBalance?.();
@@ -225,8 +226,19 @@ export default function App() {
         setDeliveryOutcome("released");
         await notify(`Deal complete: ${winner.price} ALGO released to seller`);
       } else {
-        setDeliveryOutcome("held");
-        await notify(`Late delivery: ${winner.price} ALGO remains locked in escrow`);
+        const refundRes = await fetch(`${BACKEND_URL}/api/refund`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ appId: contract.appId }),
+        });
+        if (!refundRes.ok) {
+          const errData = await refundRes.json();
+          throw new Error(errData.error || "Refund failed");
+        }
+        const refundData = await refundRes.json();
+        setRefundTxHash(refundData.txId);
+        setDeliveryOutcome("refunded");
+        await notify(`Delivery late: ${winner.price} ALGO refunded to your wallet`);
       }
 
       setStep(6);
